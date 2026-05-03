@@ -5,6 +5,7 @@ import raf from 'raf';
 import PageType from './page/type';
 import PageObjectRelation from './page/object/relation';
 import PageObjectTableOfContents from './page/object/tableOfContents';
+import PageObjectLocalGraph from './page/object/localGraph';
 import PageWidget from './page/widget';
 import * as I from 'Interface';
 
@@ -20,6 +21,7 @@ const Components = {
 	type:					 PageType,
 	objectRelation:			 PageObjectRelation,
 	objectTableOfContents:	 PageObjectTableOfContents,
+	objectLocalGraph:		 PageObjectLocalGraph,
 	widget:					 PageWidget,
 };
 
@@ -43,6 +45,7 @@ const SidebarRight = forwardRef<SidebarRightRefProps, Props>((props, ref) => {
 	const sx = useRef(0);
 	const frame = useRef(0);
 	const width = useRef(0);
+	const prevPageRef = useRef<string | undefined>(undefined);
 	const data = sidebar.getData(I.SidebarPanel.Right, isPopup);
 
 	if (withPreview) {
@@ -137,7 +140,7 @@ const SidebarRight = forwardRef<SidebarRightRefProps, Props>((props, ref) => {
 	};
 
 	useLayoutEffect(() => {
-		if (state.page == 'object/relation') {
+		if (state.page == 'object/relation' || state.page == 'object/localGraph') {
 			const object = S.Detail.get(state.rootId, state.rootId);
 
 			if (
@@ -151,6 +154,12 @@ const SidebarRight = forwardRef<SidebarRightRefProps, Props>((props, ref) => {
 				return;
 			};
 		};
+
+		if ((prevPageRef.current == 'object/localGraph') && (state.page != 'object/localGraph')) {
+			const d = sidebar.getData(I.SidebarPanel.Right, isPopup);
+			sidebar.setWidth(I.SidebarPanel.Right, isPopup, d.width, true);
+		};
+		prevPageRef.current = state.page;
 
 		pageRef.current?.forceUpdate();
 	}, [ state.rootId, state.page, state.noPreview, state.details, state.readonly, state.blockId, space ]);

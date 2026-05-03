@@ -25,6 +25,7 @@ const EditorPage = forwardRef<I.BlockRef, Props>((props, ref) => {
 	const headerRef = useRef(null);
 	const controlsRef = useRef(null);
 	const idRef = useRef('');
+	const objectOpenSeq = useRef(0);
 	const [ isDeleted, setIsDeleted ] = useState(false);
 	const [ dummy, setDummy ] = useState(0);
 	const moveDir = useRef(0);
@@ -119,11 +120,26 @@ const EditorPage = forwardRef<I.BlockRef, Props>((props, ref) => {
 	};
 
 	const open = () => {
+		if (!rootId) {
+			return;
+		};
+
 		scrollTopRef.current = Storage.getScroll('editor', rootId, isPopup);
 		setIsDeleted(false);
 		idRef.current = rootId;
 
-		C.ObjectOpen(rootId, '', S.Common.space, (message: any) => {
+		objectOpenSeq.current++;
+		const objectOpenTicket = objectOpenSeq.current;
+		const spaceAtObjectOpen = S.Common.space;
+		const isObjectOpenStale = () => (
+			(objectOpenTicket !== objectOpenSeq.current) || (S.Common.space !== spaceAtObjectOpen)
+		);
+
+		C.ObjectOpen(rootId, '', spaceAtObjectOpen, (message: any) => {
+			if (isObjectOpenStale()) {
+				return;
+			};
+
 			if (!U.Common.checkErrorOnOpen(rootId, message.error.code)) {
 				return;
 			};
@@ -135,10 +151,11 @@ const EditorPage = forwardRef<I.BlockRef, Props>((props, ref) => {
 			controlsRef.current?.forceUpdate();
 			tocRef.current?.forceUpdate();
 			setDummy(dummy + 1);
-		});
+		}, isObjectOpenStale);
 	};
 
 	const close = () => {
+		objectOpenSeq.current++;
 		Action.pageClose(isPopup, idRef.current, true);
 		Storage.setFocus(idRef.current, focus.state);
 		idRef.current = '';

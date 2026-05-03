@@ -19,6 +19,7 @@ const PageMainSet = forwardRef<I.PageRef, I.PageComponent>((props, ref) => {
 	const rootId = keyboard.getRootId(isPopup);
 	const check = U.Data.checkDetails(rootId, rootId, [ 'layout' ]);
 	const idRef = useRef('');
+	const objectOpenSeq = useRef(0);
 	const scrollTopRef = useRef(0);
 	const isClosingRef = useRef(false);
 
@@ -67,13 +68,28 @@ const PageMainSet = forwardRef<I.PageRef, I.PageComponent>((props, ref) => {
 	};
 
 	const open = () => {
+		if (!rootId) {
+			return;
+		};
+
 		idRef.current = rootId;
 		scrollTopRef.current = Storage.getScroll('set', rootId, isPopup);
 		setIsDeleted(false);
 		setIsLoading(true);
 
-		C.ObjectOpen(rootId, '', S.Common.space, (message: any) => {
+		objectOpenSeq.current++;
+		const objectOpenTicket = objectOpenSeq.current;
+		const spaceAtObjectOpen = S.Common.space;
+		const isObjectOpenStale = () => (
+			(objectOpenTicket !== objectOpenSeq.current) || (S.Common.space !== spaceAtObjectOpen)
+		);
+
+		C.ObjectOpen(rootId, '', spaceAtObjectOpen, (message: any) => {
 			setIsLoading(false);
+
+			if (isObjectOpenStale()) {
+				return;
+			};
 
 			if (!U.Common.checkErrorOnOpen(rootId, message.error.code)) {
 				return;
@@ -121,10 +137,11 @@ const PageMainSet = forwardRef<I.PageRef, I.PageComponent>((props, ref) => {
 				window.setTimeout(() => Onboarding.start('typeResetLayout', isPopup), 50);
 				analytics.event('ScreenType', { objectType: object.id });
 			};
-		});
+		}, isObjectOpenStale);
 	};
 
 	const close = () => {
+		objectOpenSeq.current++;
 		Action.pageClose(isPopup, idRef.current, true);
 		idRef.current = '';
 	};

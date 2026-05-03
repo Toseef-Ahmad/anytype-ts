@@ -1167,13 +1167,21 @@ export const ObjectBookmarkFetch = (contextId: string, url: string, callBack?: (
 	}, callBack);
 };
 
-export const ObjectOpen = (objectId: string, traceId: string, spaceId: string, callBack?: (message: any) => void) => {
+export const ObjectOpen = (
+	objectId: string,
+	traceId: string,
+	spaceId: string,
+	callBack?: (message: any) => void,
+	isSuperseded?: () => boolean,
+) => {
 	dispatcher.request('ObjectOpen', {
 		objectId,
 		traceId,
 		spaceId,
 	}, (message: any) => {
-		if (!message.error.code) {
+		const superseded = isSuperseded?.() === true;
+
+		if (!message.error.code && !superseded) {
 			dispatcher.onObjectView(objectId, traceId, message.objectView, true);
 
 			// Save last opened object

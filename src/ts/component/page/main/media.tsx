@@ -19,6 +19,7 @@ const PageMainMedia = forwardRef<I.PageRef, I.PageComponent>((props, ref) => {
 	const headerRef = useRef(null);
 	const headRef = useRef(null);
 	const idRef = useRef('');
+	const objectOpenSeq = useRef(0);
 
 	useEffect(() => {
 		open();
@@ -39,12 +40,27 @@ const PageMainMedia = forwardRef<I.PageRef, I.PageComponent>((props, ref) => {
 	}, [ rootId ]);
 
 	const open = () => {
+		if (!rootId) {
+			return;
+		};
+
 		idRef.current = rootId;
 		setIsDeleted(false);
 		setIsLoading(true);
 
-		C.ObjectOpen(rootId, '', S.Common.space, (message: any) => {
+		objectOpenSeq.current++;
+		const objectOpenTicket = objectOpenSeq.current;
+		const spaceAtObjectOpen = S.Common.space;
+		const isObjectOpenStale = () => (
+			(objectOpenTicket !== objectOpenSeq.current) || (S.Common.space !== spaceAtObjectOpen)
+		);
+
+		C.ObjectOpen(rootId, '', spaceAtObjectOpen, (message: any) => {
 			setIsLoading(false);
+
+			if (isObjectOpenStale()) {
+				return;
+			};
 
 			if (!U.Common.checkErrorOnOpen(rootId, message.error.code)) {
 				return;
@@ -60,10 +76,11 @@ const PageMainMedia = forwardRef<I.PageRef, I.PageComponent>((props, ref) => {
 			headRef.current?.forceUpdate();
 			S.Common.setRightSidebarState(isPopup, { rootId });
 			setDummy(dummy + 1);
-		});
+		}, isObjectOpenStale);
 	};
 
 	const close = () => {
+		objectOpenSeq.current++;
 		Action.pageClose(isPopup, idRef.current, true);
 		idRef.current = '';
 	};

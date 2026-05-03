@@ -20,6 +20,7 @@ const PageMainDate = forwardRef<I.PageRef, I.PageComponent>((props, ref: any) =>
 	const headRef = useRef(null);
 	const listRef = useRef(null);
 	const idRef = useRef(null);
+	const objectOpenSeq = useRef(0);
 	const relation = S.Record.getRelationByKey(relationKey);
 	const dayName = [];
 
@@ -35,11 +36,26 @@ const PageMainDate = forwardRef<I.PageRef, I.PageComponent>((props, ref: any) =>
 
 	const open = () => {
 		close();
+		if (!rootId) {
+			return;
+		};
+
 		setIsLoading(true);
 		idRef.current = rootId;
 
-		C.ObjectOpen(rootId, '', S.Common.space, (message: any) => {
+		objectOpenSeq.current++;
+		const objectOpenTicket = objectOpenSeq.current;
+		const spaceAtObjectOpen = S.Common.space;
+		const isObjectOpenStale = () => (
+			(objectOpenTicket !== objectOpenSeq.current) || (S.Common.space !== spaceAtObjectOpen)
+		);
+
+		C.ObjectOpen(rootId, '', spaceAtObjectOpen, (message: any) => {
 			setIsLoading(false);
+
+			if (isObjectOpenStale()) {
+				return;
+			};
 
 			if (!U.Common.checkErrorOnOpen(rootId, message.error.code)) {
 				return;
@@ -55,10 +71,11 @@ const PageMainDate = forwardRef<I.PageRef, I.PageComponent>((props, ref: any) =>
 			headRef.current?.forceUpdate();
 			loadCategory();
 			setDummy(dummy + 1);
-		});
+		}, isObjectOpenStale);
 	};
 
 	const close = () => {
+		objectOpenSeq.current++;
 		Action.pageClose(isPopup, idRef.current, true);
 		idRef.current = '';
 	};

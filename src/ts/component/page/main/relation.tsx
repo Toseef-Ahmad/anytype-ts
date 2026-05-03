@@ -20,6 +20,7 @@ const PageMainRelation = forwardRef<I.PageRef, I.PageComponent>((props, ref) => 
 	const headRef = useRef(null);
 	const listRef = useRef(null);
 	const idRef = useRef('');
+	const objectOpenSeq = useRef(0);
 
 	useEffect(() => {
 		open();
@@ -37,12 +38,27 @@ const PageMainRelation = forwardRef<I.PageRef, I.PageComponent>((props, ref) => 
 	}, [ rootId ]);
 	
 	const open = () => {
+		if (!rootId) {
+			return;
+		};
+
 		idRef.current = rootId;
 		setIsLoading(true);
 		setIsDeleted(false);
-		
-		C.ObjectOpen(rootId, '', S.Common.space, (message: any) => {
+
+		objectOpenSeq.current++;
+		const objectOpenTicket = objectOpenSeq.current;
+		const spaceAtObjectOpen = S.Common.space;
+		const isObjectOpenStale = () => (
+			(objectOpenTicket !== objectOpenSeq.current) || (S.Common.space !== spaceAtObjectOpen)
+		);
+
+		C.ObjectOpen(rootId, '', spaceAtObjectOpen, (message: any) => {
 			setIsLoading(false);
+
+			if (isObjectOpenStale()) {
+				return;
+			};
 
 			if (!U.Common.checkErrorOnOpen(rootId, message.error.code)) {
 				return;
@@ -61,10 +77,11 @@ const PageMainRelation = forwardRef<I.PageRef, I.PageComponent>((props, ref) => 
 			setDummy(dummy + 1);
 
 			analytics.event('ScreenRelation', { relationKey: object.relationKey });
-		});
+		}, isObjectOpenStale);
 	};
 
 	const close = () => {
+		objectOpenSeq.current++;
 		Action.pageClose(isPopup, idRef.current, true);
 		idRef.current = '';
 	};

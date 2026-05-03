@@ -8,6 +8,7 @@ const PageMainChat = forwardRef<I.PageRef, I.PageComponent>((props, ref) => {
 	const nodeRef = useRef(null);
 	const headerRef = useRef(null);
 	const idRef = useRef('');
+	const objectOpenSeq = useRef(0);
 	const blocksRef = useRef(null);
 	const chatRef = useRef(null);
 	const [ dummy, setDummy ] = useState(0);
@@ -41,8 +42,24 @@ const PageMainChat = forwardRef<I.PageRef, I.PageComponent>((props, ref) => {
 	};
 
 	const open = () => {
+		if (!rootId) {
+			return;
+		};
+
 		idRef.current = rootId;
-		C.ObjectOpen(rootId, '', S.Common.space, (message: any) => {
+
+		objectOpenSeq.current++;
+		const objectOpenTicket = objectOpenSeq.current;
+		const spaceAtObjectOpen = S.Common.space;
+		const isObjectOpenStale = () => (
+			(objectOpenTicket !== objectOpenSeq.current) || (S.Common.space !== spaceAtObjectOpen)
+		);
+
+		C.ObjectOpen(rootId, '', spaceAtObjectOpen, (message: any) => {
+			if (isObjectOpenStale()) {
+				return;
+			};
+
 			if (!U.Common.checkErrorOnOpen(rootId, message.error.code)) {
 				return;
 			};
@@ -59,10 +76,11 @@ const PageMainChat = forwardRef<I.PageRef, I.PageComponent>((props, ref) => {
 			Onboarding.startChat(isPopup);
 			setDummy(dummy + 1);
 			analytics.event('ScreenChat', { chatId: object.analyticsChatId });
-		});
+		}, isObjectOpenStale);
 	};
 
 	const close = () => {
+		objectOpenSeq.current++;
 		Action.pageClose(isPopup, idRef.current, true);
 		idRef.current = '';
 	};
